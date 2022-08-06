@@ -1,3 +1,4 @@
+from copy import copy
 import random
 
 """
@@ -45,8 +46,10 @@ def choose_move(data):
     # print(f"My Battlesnakes head this turn is: {my_head}")
     # print(f"My Battlesnakes body this turn is: {my_body}")
 
+    preferred_moves = []
     possible_moves = ["up", "down", "left", "right"]
     risky_moves = []
+    hungry = False
 
     # TODO: Step 1 - Don't hit walls.
     # Use information from `data` and `my_head` to not move beyond the game board.
@@ -70,16 +73,25 @@ def choose_move(data):
     # Use information in `data` to seek out and find food.
     # food = data['board']['food']
 
+    rasp(my_snake, my_head, board, preferred_moves, all_snakes)
+
     # Choose a random direction from the remaining possible_moves to move in, and then return that move
 
-    print(f"Pos: {possible_moves} | Risky: {risky_moves}")
+    for move in copy(preferred_moves):
+        if move not in possible_moves:
+            delete_move(move, preferred_moves)
 
-    if len(possible_moves) != 0:
+    print(f"Pref: {preferred_moves} | Pos: {possible_moves} | Risky: {risky_moves}")
+
+    if len(preferred_moves) != 0:
+        move = random.choice(preferred_moves)
+    elif len(possible_moves) != 0:
         move = random.choice(possible_moves)
     elif len(risky_moves) != 0:
         move = random.choice(risky_moves)
     else:
         move = snail_squish(my_head, my_neck)
+
     # TODO: Explore new strategies for picking a move that are better than random
 
     print(f"{data['game']['id']} MOVE {data['turn']}: {move} picked from all valid options in {possible_moves}")
@@ -181,3 +193,31 @@ def risky_tails(my_head, all_snakes, possible_moves, risky_moves):
         delete_move(move, possible_moves)
 
     return risky_moves
+
+def rasp(my_snake, my_head, board, preferred_moves, all_snakes):
+
+    food = board["food"]
+    crumb_map = sorted(food, key=lambda crumb: (abs(my_head["x"] - crumb["x"]) + abs(my_head["y"] - crumb["y"])))
+    for crumb in food:
+        crumb_dist = (abs(my_head["x"] - crumb["x"]) + abs(my_head["y"] - crumb["y"]))
+        print(f"Crumb Map: {crumb_dist}{crumb_map}")
+
+    nearest_crumb = crumb_map[0]
+
+
+    snake_lengths = sorted(all_snakes, key=lambda snake: snake["length"])
+    shortest_snake = snake_lengths[0]
+    print(f"Shortest Snake: {shortest_snake['name']}")
+
+    if shortest_snake == my_snake:
+        print("I am short, I should eat!")
+        if my_head["x"] > nearest_crumb["x"]:
+            preferred_moves.append("left")
+        if my_head["x"] < nearest_crumb["x"]:
+            preferred_moves.append("right")
+        if my_head["y"] > nearest_crumb["y"]:
+            preferred_moves.append("down")
+        if my_head["y"] < nearest_crumb["y"]:
+            preferred_moves.append("up")
+
+    return preferred_moves
