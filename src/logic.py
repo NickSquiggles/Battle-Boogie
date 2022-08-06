@@ -30,17 +30,8 @@ def get_info():
 
 
 def choose_move(data):
-    """
-    data: Dictionary of all Game Board data as received from the Battlesnake Engine.
-    For a full example of 'data', see https://docs.battlesnake.com/references/api/sample-move-request
-
-    return: A String, the single move to make. One of "up", "down", "left" or "right".
-
-    Use the information in 'data' to decide your next move. The 'data' variable can be interacted
-    with as a Python Dictionary, and contains all of the information about the Battlesnake board
-    for each move of the game.
-
-    """
+    print(f"--- start of turn {data['turn']} (i am snake {data['you']['id']}) ---")
+    
     my_snake = data["you"]      # A dictionary describing your snake's position on the board
     my_head = my_snake["head"]  # A dictionary of coordinates like {"x": 0, "y": 0}
     my_body = my_snake["body"]
@@ -55,6 +46,7 @@ def choose_move(data):
     # print(f"My Battlesnakes body this turn is: {my_body}")
 
     possible_moves = ["up", "down", "left", "right"]
+    risky_moves = []
 
     # TODO: Step 1 - Don't hit walls.
     # Use information from `data` and `my_head` to not move beyond the game board.
@@ -65,19 +57,27 @@ def choose_move(data):
 
     # TODO: Step 2 - Don't hit yourself.
     # Use information from `my_body` to avoid moves that would collide with yourself.
-    possible_moves = avoid_my_body(my_head, my_body, possible_moves)
 
     # TODO: Step 3 - Don't collide with others.
     # Use information from `data` to prevent your Battlesnake from colliding with others.
-    possible_moves = avoid_other_lads(my_head, all_snakes, possible_moves)
+    possible_moves = avoid_bodies(my_head, all_snakes, possible_moves)
+
+    risky_moves = head_to_head(my_head, all_snakes, possible_moves, risky_moves)
+
+    risky_moves = risky_tails(my_head, all_snakes, possible_moves, risky_moves)
 
     # TODO: Step 4 - Find food.
     # Use information in `data` to seek out and find food.
     # food = data['board']['food']
 
     # Choose a random direction from the remaining possible_moves to move in, and then return that move
+
+    print(f"Pos: {possible_moves} | Risky: {risky_moves}")
+
     if len(possible_moves) != 0:
         move = random.choice(possible_moves)
+    elif len(risky_moves) != 0:
+        move = random.choice(risky_moves)
     else:
         move = snail_squish(my_head, my_neck)
     # TODO: Explore new strategies for picking a move that are better than random
@@ -111,23 +111,10 @@ def avoid_walls(my_head, board_height, board_width, possible_moves):
 
     return possible_moves
 
-def avoid_my_body(my_head, my_body, possible_moves):
-
-    if {"x": my_head["x"]-1, "y": my_head["y"]} in my_body:
-        delete_move("left", possible_moves)
-    if {"x": my_head["x"]+1, "y": my_head["y"]} in my_body:
-        delete_move("right", possible_moves)
-    if {"x": my_head["x"], "y": my_head["y"]-1} in my_body:
-        delete_move("down", possible_moves)
-    if {"x": my_head["x"], "y": my_head["y"]+1} in my_body:
-        delete_move("up", possible_moves)
-
-    return possible_moves
-
-def avoid_other_lads(my_head, all_snakes, possible_moves):
+def avoid_bodies(my_head, all_snakes, possible_moves):
 
     for snake in all_snakes:
-        body = snake["body"]
+        body = snake["body"][:-1]
 
         if {"x": my_head["x"]-1, "y": my_head["y"]} in body:
             delete_move("left", possible_moves)
@@ -139,3 +126,56 @@ def avoid_other_lads(my_head, all_snakes, possible_moves):
             delete_move("up", possible_moves)
 
     return possible_moves
+
+def adjacent_square(my_head, direction):
+
+    match direction:
+        case "left": return {"x": my_head["x"]-1, "y": my_head["y"]}
+        case "right": return {"x": my_head["x"]+1, "y": my_head["y"]}
+        case "down": return {"x": my_head["x"], "y": my_head["y"]-1}
+        case "up": return {"x": my_head["x"], "y": my_head["y"]+1}
+
+def head_to_head(my_head, all_snakes, possible_moves, risky_moves):
+
+    for move in possible_moves:
+        new_head = adjacent_square(my_head, move)
+
+        for snake in all_snakes:
+            head = snake["head"]
+
+            if head == my_head:
+                continue
+            if{"x": new_head["x"]-1, "y": new_head["y"]} == head:
+                risky_moves.append(move)
+                break
+            if{"x": new_head["x"]+1, "y": new_head["y"]} == head:
+                risky_moves.append(move)
+                break
+            if{"x": new_head["x"], "y": new_head["y"]-1} == head:
+                risky_moves.append(move)
+                break
+            if{"x": new_head["x"], "y": new_head["y"]+1} == head:
+                risky_moves.append(move)
+                break
+
+    for move in risky_moves:
+        delete_move(move, possible_moves)
+    
+    return risky_moves
+
+def risky_tails(my_head, all_snakes, possible_moves, risky_moves):
+
+    for move in possible_moves:
+        new_head = adjacent_square(my_head, move)
+
+        for snake in all_snakes:
+            tail = snake["body"][-1]
+
+            if{"x": new_head["x"], "y": new_head["y"]} == tail:
+                risky_moves.append(move)
+                break
+
+    for move in risky_moves:
+        delete_move(move, possible_moves)
+
+    return risky_moves
