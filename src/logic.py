@@ -62,7 +62,7 @@ def choose_move(data):
     # Use information from `data` to prevent your Battlesnake from colliding with others.
     possible_moves = avoid_bodies(my_head, all_snakes, possible_moves)
 
-    risky_moves = head_to_head(my_head, all_snakes, possible_moves, risky_moves)
+    risky_moves = head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves)
 
     risky_moves = risky_tails(my_head, all_snakes, possible_moves, risky_moves)
 
@@ -135,7 +135,7 @@ def adjacent_square(my_head, direction):
         case "down": return {"x": my_head["x"], "y": my_head["y"]-1}
         case "up": return {"x": my_head["x"], "y": my_head["y"]+1}
 
-def head_to_head(my_head, all_snakes, possible_moves, risky_moves):
+def head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves):
 
     for move in possible_moves:
         new_head = adjacent_square(my_head, move)
@@ -144,6 +144,8 @@ def head_to_head(my_head, all_snakes, possible_moves, risky_moves):
             head = snake["head"]
 
             if head == my_head:
+                continue
+            if snake["length"] < my_snake["length"]:
                 continue
             if{"x": new_head["x"]-1, "y": new_head["y"]} == head:
                 risky_moves.append(move)
