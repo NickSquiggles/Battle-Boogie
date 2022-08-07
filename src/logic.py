@@ -1,26 +1,7 @@
 from copy import copy
-import random
-
-"""
-This file can be a nice home for your Battlesnake's logic and helper functions.
-
-We have started this for you, and included some logic to remove your Battlesnake's 'neck'
-from the list of possible moves!
-"""
-
-def delete_move(move, possible_moves):
-
-    if move in possible_moves:
-        possible_moves.remove(move)
-
 
 def get_info():
-    """
-    This controls your Battlesnake appearance and author permissions.
-    For customization options, see https://docs.battlesnake.com/references/personalization
 
-    TIP: If you open your Battlesnake URL in browser you should see this data.
-    """
     return {
         "apiversion": "1",
         "author": "NickSquiggles",
@@ -29,54 +10,40 @@ def get_info():
         "tail": "snail",
     }
 
+def delete_move(move, possible_moves):
+
+    if move in possible_moves:
+        possible_moves.remove(move)
 
 def choose_move(data):
     print(f"--- start of turn {data['turn']} (i am snake {data['you']['id']}) ---")
     
-    my_snake = data["you"]      # A dictionary describing your snake's position on the board
-    my_head = my_snake["head"]  # A dictionary of coordinates like {"x": 0, "y": 0}
+    # My data
+    my_snake = data["you"]
+    my_head = my_snake["head"]
     my_body = my_snake["body"]
-    my_neck = my_body[1]  # A list of coordinate dictionaries like [{"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 2, "y": 0}]
-    all_snakes = data["board"]["snakes"]
+    my_neck = my_body[1]
+    comfort_level = 30
 
-    # Uncomment the lines below to see what this data looks like in your output!
-    # print(f"~~~ Turn: {data['turn']}  Game Mode: {data['game']['ruleset']['name']} ~~~")
-    # print(f"All board data this turn: {data}")
-    # print(f"My Battlesnake this turn is: {my_snake}")
-    # print(f"My Battlesnakes head this turn is: {my_head}")
-    # print(f"My Battlesnakes body this turn is: {my_body}")
-
-    preferred_moves = []
-    possible_moves = ["up", "down", "left", "right"]
-    risky_moves = []
-    hungry = False
-
-    # TODO: Step 1 - Don't hit walls.
-    # Use information from `data` and `my_head` to not move beyond the game board.
+    # Board data
     board = data["board"]
     board_height = board["height"]
     board_width = board["width"]
-    possible_moves = avoid_walls(my_head, board_height, board_width, possible_moves)
+    all_snakes = data["board"]["snakes"]
 
-    # TODO: Step 2 - Don't hit yourself.
-    # Use information from `my_body` to avoid moves that would collide with yourself.
+    # Move tiers
+    preferred_moves = []
+    possible_moves = ["up", "down", "left", "right"]
+    risky_moves = []
 
-    # TODO: Step 3 - Don't collide with others.
-    # Use information from `data` to prevent your Battlesnake from colliding with others.
-    possible_moves = avoid_bodies(my_head, all_snakes, possible_moves)
+    # Behaviour functions
+    avoid_walls(my_head, board_height, board_width, possible_moves)
+    avoid_bodies(my_head, all_snakes, possible_moves)
+    head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, preferred_moves)
+    risky_tails(my_head, all_snakes, possible_moves, risky_moves)
+    rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level)
 
-    risky_moves = head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves)
-
-    risky_moves = risky_tails(my_head, all_snakes, possible_moves, risky_moves)
-
-    # TODO: Step 4 - Find food.
-    # Use information in `data` to seek out and find food.
-    # food = data['board']['food']
-
-    rasp(my_snake, my_head, board, preferred_moves, all_snakes)
-
-    # Choose a random direction from the remaining possible_moves to move in, and then return that move
-
+    # Choose direction to move
     for move in copy(preferred_moves):
         if move not in possible_moves:
             delete_move(move, preferred_moves)
@@ -92,22 +59,20 @@ def choose_move(data):
     else:
         move = snail_squish(my_head, my_neck)
 
-    # TODO: Explore new strategies for picking a move that are better than random
-
     print(f"{data['game']['id']} MOVE {data['turn']}: {move} picked from all valid options in {possible_moves}")
 
     return move
 
-
+# If all else fails, hide inside your own shell
 def snail_squish(my_head, my_neck):
 
-    if my_neck["x"] < my_head["x"]:  # my neck is left of my head
+    if my_neck["x"] < my_head["x"]:
         return "left"
-    elif my_neck["x"] > my_head["x"]:  # my neck is right of my head
+    elif my_neck["x"] > my_head["x"]:
         return "right"
-    elif my_neck["y"] < my_head["y"]:  # my neck is below my head
+    elif my_neck["y"] < my_head["y"]:
         return "down"
-    elif my_neck["y"] > my_head["y"]:  # my neck is above my head
+    elif my_neck["y"] > my_head["y"]:
         return "up"
 
 def avoid_walls(my_head, board_height, board_width, possible_moves):
@@ -120,8 +85,6 @@ def avoid_walls(my_head, board_height, board_width, possible_moves):
         delete_move("down", possible_moves)
     if my_head["y"] == board_height - 1:
         delete_move("up", possible_moves)
-
-    return possible_moves
 
 def avoid_bodies(my_head, all_snakes, possible_moves):
 
@@ -137,8 +100,6 @@ def avoid_bodies(my_head, all_snakes, possible_moves):
         if {"x": my_head["x"], "y": my_head["y"]+1} in body:
             delete_move("up", possible_moves)
 
-    return possible_moves
-
 def adjacent_square(my_head, direction):
 
     match direction:
@@ -147,35 +108,36 @@ def adjacent_square(my_head, direction):
         case "down": return {"x": my_head["x"], "y": my_head["y"]-1}
         case "up": return {"x": my_head["x"], "y": my_head["y"]+1}
 
-def head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves):
+def head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, preferred_moves):
 
     for move in possible_moves:
         new_head = adjacent_square(my_head, move)
 
         for snake in all_snakes:
             head = snake["head"]
+            move_tier = risky_moves
 
             if head == my_head:
                 continue
             if snake["length"] < my_snake["length"]:
-                continue
+                print("I am bigger, eat them!")
+                move_tier = preferred_moves
+
             if{"x": new_head["x"]-1, "y": new_head["y"]} == head:
-                risky_moves.append(move)
+                move_tier.append(move)
                 break
             if{"x": new_head["x"]+1, "y": new_head["y"]} == head:
-                risky_moves.append(move)
+                move_tier.append(move)
                 break
             if{"x": new_head["x"], "y": new_head["y"]-1} == head:
-                risky_moves.append(move)
+                move_tier.append(move)
                 break
             if{"x": new_head["x"], "y": new_head["y"]+1} == head:
-                risky_moves.append(move)
+                move_tier.append(move)
                 break
 
     for move in risky_moves:
         delete_move(move, possible_moves)
-    
-    return risky_moves
 
 def risky_tails(my_head, all_snakes, possible_moves, risky_moves):
 
@@ -192,25 +154,27 @@ def risky_tails(my_head, all_snakes, possible_moves, risky_moves):
     for move in risky_moves:
         delete_move(move, possible_moves)
 
-    return risky_moves
+def rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level):
 
-def rasp(my_snake, my_head, board, preferred_moves, all_snakes):
-
+    my_health = my_snake["health"]
     food = board["food"]
     crumb_map = sorted(food, key=lambda crumb: (abs(my_head["x"] - crumb["x"]) + abs(my_head["y"] - crumb["y"])))
+
+    """
     for crumb in food:
         crumb_dist = (abs(my_head["x"] - crumb["x"]) + abs(my_head["y"] - crumb["y"]))
         print(f"Crumb Map: {crumb_dist}{crumb_map}")
+    """
 
     nearest_crumb = crumb_map[0]
 
 
     snake_lengths = sorted(all_snakes, key=lambda snake: snake["length"])
     shortest_snake = snake_lengths[0]
-    print(f"Shortest Snake: {shortest_snake['name']}")
+    print(f"Shortest Snake: {shortest_snake['name']} | Health: {shortest_snake['health']}")
 
-    if shortest_snake == my_snake:
-        print("I am short, I should eat!")
+    if (len(all_snakes) > 1 and shortest_snake == my_snake) or my_health < comfort_level:
+        print("I should eat!")
         if my_head["x"] > nearest_crumb["x"]:
             preferred_moves.append("left")
         if my_head["x"] < nearest_crumb["x"]:
@@ -219,5 +183,3 @@ def rasp(my_snake, my_head, board, preferred_moves, all_snakes):
             preferred_moves.append("down")
         if my_head["y"] < nearest_crumb["y"]:
             preferred_moves.append("up")
-
-    return preferred_moves
