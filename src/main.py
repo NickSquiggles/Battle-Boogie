@@ -1,8 +1,8 @@
 import logging
 import os
 
-from flask import Flask
-from flask import request
+from flask import Flask, request
+from flask_cors import CORS
 
 import logic
 
@@ -71,6 +71,9 @@ if __name__ == "__main__":
     host = "0.0.0.0"
     port = int(os.environ.get("PORT", "8080"))
 
+    # enable CORS for battlesnake tester
+    CORS(app)
+
     print(f"\nRunning Battlesnake server at http://{host}:{port}")
-    app.env = 'development'
+    app.debug = True
     app.run(host=host, port=port, debug=True)

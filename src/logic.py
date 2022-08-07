@@ -1,4 +1,6 @@
 from copy import copy
+import random
+from statistics import mean
 
 def get_info():
 
@@ -41,7 +43,12 @@ def choose_move(data):
     avoid_bodies(my_head, all_snakes, possible_moves)
     head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, preferred_moves)
     risky_tails(my_head, all_snakes, possible_moves, risky_moves)
-    rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level)
+
+    if len(possible_moves) > 1:
+        tunnel_detection(my_head, board, all_snakes, preferred_moves, possible_moves, risky_moves)
+
+    if board["food"]:
+        rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level)
 
     # Choose direction to move
     for move in copy(preferred_moves):
@@ -120,7 +127,6 @@ def head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, pre
             if head == my_head:
                 continue
             if snake["length"] < my_snake["length"]:
-                print("I am bigger, eat them!")
                 move_tier = preferred_moves
 
             if{"x": new_head["x"]-1, "y": new_head["y"]} == head:
@@ -160,6 +166,7 @@ def rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level):
     food = board["food"]
     crumb_map = sorted(food, key=lambda crumb: (abs(my_head["x"] - crumb["x"]) + abs(my_head["y"] - crumb["y"])))
 
+    # Display locations of all food on map
     """
     for crumb in food:
         crumb_dist = (abs(my_head["x"] - crumb["x"]) + abs(my_head["y"] - crumb["y"]))
@@ -174,7 +181,6 @@ def rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level):
     print(f"Shortest Snake: {shortest_snake['name']} | Health: {shortest_snake['health']}")
 
     if (len(all_snakes) > 1 and shortest_snake == my_snake) or my_health < comfort_level:
-        print("I should eat!")
         if my_head["x"] > nearest_crumb["x"]:
             preferred_moves.append("left")
         if my_head["x"] < nearest_crumb["x"]:
@@ -183,3 +189,56 @@ def rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level):
             preferred_moves.append("down")
         if my_head["y"] < nearest_crumb["y"]:
             preferred_moves.append("up")
+
+def tunnel_detection(my_head, board, all_snakes, preferred_moves, possible_moves, risky_moves):
+
+    tunnel_lengths = []
+    for move in possible_moves:
+        tunnel_lengths.append(flood_fill(my_head, board, all_snakes, move))
+    cutoff = mean(tunnel_lengths)
+    print(f"Average length: {cutoff}")
+
+    for move, tunnel_length in zip(possible_moves, tunnel_lengths):
+        print(f"Move: {move} | Length: {tunnel_length}")
+        if tunnel_length < cutoff:
+            print(f"Risky direction: {move} | Length: {tunnel_length}")
+            risky_moves.append(move)
+    
+    for move in risky_moves:
+        delete_move(move, possible_moves)
+    
+
+def flood_fill(my_head, board, all_snakes, move):
+    
+    target = adjacent_square(my_head, move)
+    to_visit = [target]
+    visited = []
+
+    while to_visit:
+        current_square = to_visit.pop()
+        visited.append(current_square)
+
+        for direction in ["left", "right", "down", "up"]:
+            next_target = adjacent_square(current_square, direction)
+
+            if next_target not in visited:
+                if empty_square_check(next_target, board["width"], board["height"], all_snakes):
+                    to_visit.append(next_target)
+    
+    return len(visited)
+
+
+def empty_square_check(square, board_width, board_height, all_snakes):
+
+    #Check if square is out of bounds
+    if square["x"] < 0 or square["x"] >= board_width or square["y"] < 0 or square["y"] >= board_height:
+        return False
+    
+    #Check if square is inside a snake
+    for snake in all_snakes:
+        body = snake["body"]
+
+        if square in body:
+            return False
+
+    return True
