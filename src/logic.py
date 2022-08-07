@@ -12,11 +12,6 @@ def get_info():
         "tail": "snail",
     }
 
-def delete_move(move, possible_moves):
-
-    if move in possible_moves:
-        possible_moves.remove(move)
-
 def choose_move(data):
     print(f"--- start of turn {data['turn']} (i am snake {data['you']['id']}) ---")
     
@@ -70,6 +65,16 @@ def choose_move(data):
 
     return move
 
+# Utility functions
+def delete_move(move, possible_moves):
+
+    if move in possible_moves:
+        possible_moves.remove(move)
+
+def tuple_me(square):
+
+    return (square["x"], square["y"])
+
 # If all else fails, hide inside your own shell
 def snail_squish(my_head, my_neck):
 
@@ -82,6 +87,7 @@ def snail_squish(my_head, my_neck):
     elif my_neck["y"] > my_head["y"]:
         return "up"
 
+# Avoidance functions
 def avoid_walls(my_head, board_height, board_width, possible_moves):
 
     if my_head["x"] == 0:
@@ -107,14 +113,7 @@ def avoid_bodies(my_head, all_snakes, possible_moves):
         if {"x": my_head["x"], "y": my_head["y"]+1} in body:
             delete_move("up", possible_moves)
 
-def adjacent_square(my_head, direction):
-
-    match direction:
-        case "left": return {"x": my_head["x"]-1, "y": my_head["y"]}
-        case "right": return {"x": my_head["x"]+1, "y": my_head["y"]}
-        case "down": return {"x": my_head["x"], "y": my_head["y"]-1}
-        case "up": return {"x": my_head["x"], "y": my_head["y"]+1}
-
+# Risky move functions
 def head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, preferred_moves):
 
     for move in possible_moves:
@@ -160,6 +159,68 @@ def risky_tails(my_head, all_snakes, possible_moves, risky_moves):
     for move in risky_moves:
         delete_move(move, possible_moves)
 
+def adjacent_square(my_head, direction):
+
+    match direction:
+        case "left": return {"x": my_head["x"]-1, "y": my_head["y"]}
+        case "right": return {"x": my_head["x"]+1, "y": my_head["y"]}
+        case "down": return {"x": my_head["x"], "y": my_head["y"]-1}
+        case "up": return {"x": my_head["x"], "y": my_head["y"]+1}
+
+def tunnel_detection(my_head, board, all_snakes, preferred_moves, possible_moves, risky_moves):
+
+    tunnel_lengths = []
+    for move in possible_moves:
+        tunnel_lengths.append(flood_fill(my_head, board, all_snakes, move))
+    cutoff = mean(tunnel_lengths)
+    print(f"Average length: {cutoff}")
+
+    for move, tunnel_length in zip(possible_moves, tunnel_lengths):
+        print(f"Move: {move} | Length: {tunnel_length}")
+        if tunnel_length < cutoff:
+            print(f"Risky direction: {move} | Length: {tunnel_length}")
+            risky_moves.append(move)
+    
+    for move in risky_moves:
+        delete_move(move, possible_moves)
+    
+
+def flood_fill(my_head, board, all_snakes, move):
+    
+    target = adjacent_square(my_head, move)
+    to_visit = [target]
+    visited = set()
+
+    while to_visit:
+        current_square = to_visit.pop()
+        visited.add(tuple_me(current_square))
+
+        for direction in ["left", "right", "down", "up"]:
+            next_target = adjacent_square(current_square, direction)
+
+            if tuple_me(next_target) not in visited:
+                if empty_square_check(next_target, board["width"], board["height"], all_snakes):
+                    to_visit.append(next_target)
+    
+    return len(visited)
+
+
+def empty_square_check(square, board_width, board_height, all_snakes):
+
+    #Check if square is out of bounds
+    if square["x"] < 0 or square["x"] >= board_width or square["y"] < 0 or square["y"] >= board_height:
+        return False
+    
+    #Check if square is inside a snake
+    for snake in all_snakes:
+        body = snake["body"]
+
+        if square in body:
+            return False
+
+    return True
+
+# Preferable move functions
 def rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level):
 
     my_health = my_snake["health"]
@@ -189,56 +250,3 @@ def rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level):
             preferred_moves.append("down")
         if my_head["y"] < nearest_crumb["y"]:
             preferred_moves.append("up")
-
-def tunnel_detection(my_head, board, all_snakes, preferred_moves, possible_moves, risky_moves):
-
-    tunnel_lengths = []
-    for move in possible_moves:
-        tunnel_lengths.append(flood_fill(my_head, board, all_snakes, move))
-    cutoff = mean(tunnel_lengths)
-    print(f"Average length: {cutoff}")
-
-    for move, tunnel_length in zip(possible_moves, tunnel_lengths):
-        print(f"Move: {move} | Length: {tunnel_length}")
-        if tunnel_length < cutoff:
-            print(f"Risky direction: {move} | Length: {tunnel_length}")
-            risky_moves.append(move)
-    
-    for move in risky_moves:
-        delete_move(move, possible_moves)
-    
-
-def flood_fill(my_head, board, all_snakes, move):
-    
-    target = adjacent_square(my_head, move)
-    to_visit = [target]
-    visited = []
-
-    while to_visit:
-        current_square = to_visit.pop()
-        visited.append(current_square)
-
-        for direction in ["left", "right", "down", "up"]:
-            next_target = adjacent_square(current_square, direction)
-
-            if next_target not in visited:
-                if empty_square_check(next_target, board["width"], board["height"], all_snakes):
-                    to_visit.append(next_target)
-    
-    return len(visited)
-
-
-def empty_square_check(square, board_width, board_height, all_snakes):
-
-    #Check if square is out of bounds
-    if square["x"] < 0 or square["x"] >= board_width or square["y"] < 0 or square["y"] >= board_height:
-        return False
-    
-    #Check if square is inside a snake
-    for snake in all_snakes:
-        body = snake["body"]
-
-        if square in body:
-            return False
-
-    return True
