@@ -26,6 +26,7 @@ def choose_move(data):
     board = data["board"]
     board_height = board["height"]
     board_width = board["width"]
+    hazards = board["hazards"]
     all_snakes = data["board"]["snakes"]
 
     # Move tiers
@@ -35,6 +36,7 @@ def choose_move(data):
 
     # Behaviour functions
     avoid_walls(my_head, board_height, board_width, possible_moves)
+    avoid_hazards(my_head, hazards, possible_moves)
     avoid_bodies(my_head, all_snakes, possible_moves)
     head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, preferred_moves)
     risky_tails(my_head, all_snakes, possible_moves, risky_moves)
@@ -97,6 +99,18 @@ def avoid_walls(my_head, board_height, board_width, possible_moves):
     if my_head["y"] == 0:
         delete_move("down", possible_moves)
     if my_head["y"] == board_height - 1:
+        delete_move("up", possible_moves)
+
+def avoid_hazards(my_head, hazards, possible_moves):
+
+    # for hazard in hazards:
+    if {"x": my_head["x"]-1, "y": my_head["y"]} in hazards:
+        delete_move("left", possible_moves)
+    if {"x": my_head["x"]+1, "y": my_head["y"]} in hazards:
+        delete_move("right", possible_moves)
+    if {"x": my_head["x"], "y": my_head["y"]-1} in hazards:
+        delete_move("down", possible_moves)
+    if {"x": my_head["x"], "y": my_head["y"]+1} in hazards:
         delete_move("up", possible_moves)
 
 def avoid_bodies(my_head, all_snakes, possible_moves):
