@@ -20,6 +20,7 @@ def choose_move(data):
     my_head = my_snake["head"]
     my_body = my_snake["body"]
     my_neck = my_body[1]
+    my_health = my_snake["health"]
     comfort_level = 30
 
     # Board data
@@ -27,6 +28,7 @@ def choose_move(data):
     board_height = board["height"]
     board_width = board["width"]
     hazards = board["hazards"]
+    hazard_damage = data["game"]["ruleset"]["settings"]["hazardDamagePerTurn"]
     all_snakes = data["board"]["snakes"]
 
     # Move tiers
@@ -36,7 +38,7 @@ def choose_move(data):
 
     # Behaviour functions
     avoid_walls(my_head, board_height, board_width, possible_moves)
-    avoid_hazards(my_head, hazards, possible_moves)
+    avoid_hazards(my_head, my_health, hazards, hazard_damage, possible_moves, risky_moves)
     avoid_bodies(my_head, all_snakes, possible_moves)
     head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, preferred_moves)
     risky_tails(my_head, all_snakes, possible_moves, risky_moves)
@@ -45,7 +47,7 @@ def choose_move(data):
         tunnel_detection(my_head, board, all_snakes, preferred_moves, possible_moves, risky_moves)
 
     if board["food"]:
-        rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level)
+        rasp(my_snake, my_head, board, preferred_moves, all_snakes, my_health, comfort_level)
 
     # Choose direction to move
     for move in copy(preferred_moves):
@@ -101,17 +103,26 @@ def avoid_walls(my_head, board_height, board_width, possible_moves):
     if my_head["y"] == board_height - 1:
         delete_move("up", possible_moves)
 
-def avoid_hazards(my_head, hazards, possible_moves):
+def avoid_hazards(my_head, my_health, hazards, hazard_damage, possible_moves, risky_moves):
+
+    move_tier = risky_moves
+    if hazard_damage >= my_health:
+        deadly_moves = []
+        move_tier = deadly_moves
 
     # for hazard in hazards:
     if {"x": my_head["x"]-1, "y": my_head["y"]} in hazards:
         delete_move("left", possible_moves)
+        move_tier.append("left")
     if {"x": my_head["x"]+1, "y": my_head["y"]} in hazards:
         delete_move("right", possible_moves)
+        move_tier.append("right")
     if {"x": my_head["x"], "y": my_head["y"]-1} in hazards:
         delete_move("down", possible_moves)
+        move_tier.append("down")
     if {"x": my_head["x"], "y": my_head["y"]+1} in hazards:
         delete_move("up", possible_moves)
+        move_tier.append("up")
 
 def avoid_bodies(my_head, all_snakes, possible_moves):
 
@@ -235,9 +246,8 @@ def empty_square_check(square, board_width, board_height, all_snakes):
     return True
 
 # Preferable move functions
-def rasp(my_snake, my_head, board, preferred_moves, all_snakes, comfort_level):
+def rasp(my_snake, my_head, board, preferred_moves, all_snakes, my_health, comfort_level):
 
-    my_health = my_snake["health"]
     food = board["food"]
     crumb_map = sorted(food, key=lambda crumb: (abs(my_head["x"] - crumb["x"]) + abs(my_head["y"] - crumb["y"])))
 
