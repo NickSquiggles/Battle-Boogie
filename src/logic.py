@@ -23,7 +23,8 @@ def choose_move(data):
     my_health = my_snake["health"]
     comfort_level = 30
 
-    # Board data
+    # Game data
+    ruleset = data["game"]["ruleset"]["name"]
     board = data["board"]
     board_height = board["height"]
     board_width = board["width"]
@@ -37,7 +38,7 @@ def choose_move(data):
     risky_moves = []
 
     # Behaviour functions
-    avoid_walls(my_head, board_height, board_width, possible_moves)
+    avoid_walls(ruleset, my_head, board_height, board_width, all_snakes, possible_moves)
     avoid_hazards(my_head, my_health, hazards, hazard_damage, possible_moves, risky_moves)
     avoid_bodies(my_head, all_snakes, possible_moves)
     head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, preferred_moves)
@@ -92,7 +93,11 @@ def snail_squish(my_head, my_neck):
         return "up"
 
 # Avoidance functions
-def avoid_walls(my_head, board_height, board_width, possible_moves):
+def avoid_walls(ruleset, my_head, board_height, board_width, all_snakes, possible_moves):
+
+    if ruleset == "wrapped":
+        think_with_portals(my_head, board_height, board_width, all_snakes, possible_moves)
+        return
 
     if my_head["x"] == 0:
         delete_move("left", possible_moves)
@@ -102,6 +107,21 @@ def avoid_walls(my_head, board_height, board_width, possible_moves):
         delete_move("down", possible_moves)
     if my_head["y"] == board_height - 1:
         delete_move("up", possible_moves)
+
+def think_with_portals(my_head, board_height, board_width, all_snakes, possible_moves):
+    
+    if my_head["x"] == 0:
+        my_wrapped_head = {"x": board_width, "y": my_head["y"]}
+        avoid_bodies(my_wrapped_head, all_snakes, possible_moves)
+    if my_head["x"] == board_width - 1:
+        my_wrapped_head = {"x": 0, "y": my_head["y"]}
+        avoid_bodies(my_wrapped_head, all_snakes, possible_moves)
+    if my_head["y"] == 0:
+        my_wrapped_head = {"x": my_head["x"], "y": board_height}
+        avoid_bodies(my_wrapped_head, all_snakes, possible_moves)
+    if my_head["y"] == board_height - 1:
+        my_wrapped_head = {"x": my_head["x"], "y": 0}
+        avoid_bodies(my_wrapped_head, all_snakes, possible_moves)
 
 def avoid_hazards(my_head, my_health, hazards, hazard_damage, possible_moves, risky_moves):
 
