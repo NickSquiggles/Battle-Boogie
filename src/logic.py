@@ -44,7 +44,7 @@ def choose_move(data):
     risky_tails(my_head, all_snakes, possible_moves, risky_moves)
 
     if len(possible_moves) > 1:
-        tunnel_detection(my_head, board, all_snakes, preferred_moves, possible_moves, risky_moves)
+        tunnel_detection(my_head, board, all_snakes, hazards, possible_moves, risky_moves)
 
     if board["food"]:
         rasp(my_snake, my_head, board, preferred_moves, all_snakes, my_health, comfort_level)
@@ -192,11 +192,11 @@ def adjacent_square(my_head, direction):
         case "down": return {"x": my_head["x"], "y": my_head["y"]-1}
         case "up": return {"x": my_head["x"], "y": my_head["y"]+1}
 
-def tunnel_detection(my_head, board, all_snakes, preferred_moves, possible_moves, risky_moves):
+def tunnel_detection(my_head, board, all_snakes, hazards, possible_moves, risky_moves):
 
     tunnel_lengths = []
     for move in possible_moves:
-        tunnel_lengths.append(flood_fill(my_head, board, all_snakes, move))
+        tunnel_lengths.append(flood_fill(my_head, board, all_snakes, hazards, move))
     cutoff = mean(tunnel_lengths)
     print(f"Average length: {cutoff}")
 
@@ -210,7 +210,7 @@ def tunnel_detection(my_head, board, all_snakes, preferred_moves, possible_moves
         delete_move(move, possible_moves)
     
 
-def flood_fill(my_head, board, all_snakes, move):
+def flood_fill(my_head, board, all_snakes, hazards, move):
     
     target = adjacent_square(my_head, move)
     to_visit = [target]
@@ -224,13 +224,13 @@ def flood_fill(my_head, board, all_snakes, move):
             next_target = adjacent_square(current_square, direction)
 
             if tuple_me(next_target) not in visited:
-                if empty_square_check(next_target, board["width"], board["height"], all_snakes):
+                if empty_square_check(next_target, board["width"], board["height"], all_snakes, hazards):
                     to_visit.append(next_target)
     
     return len(visited)
 
 
-def empty_square_check(square, board_width, board_height, all_snakes):
+def empty_square_check(square, board_width, board_height, all_snakes, hazards):
 
     #Check if square is out of bounds
     if square["x"] < 0 or square["x"] >= board_width or square["y"] < 0 or square["y"] >= board_height:
@@ -242,6 +242,10 @@ def empty_square_check(square, board_width, board_height, all_snakes):
 
         if square in body:
             return False
+
+    #Check if square is inside a hazard
+    if square in hazards:
+        return False
 
     return True
 
