@@ -1,6 +1,7 @@
 from copy import copy
 import random
 from statistics import mean
+from flask import g
 
 def get_info():
 
@@ -24,7 +25,8 @@ def choose_move(data):
     comfort_level = 30
 
     # Game data
-    ruleset = data["game"]["ruleset"]["name"]
+    g.data = data
+    g.ruleset = data["game"]["ruleset"]["name"]
     board = data["board"]
     board_height = board["height"]
     board_width = board["width"]
@@ -38,7 +40,7 @@ def choose_move(data):
     risky_moves = []
 
     # Behaviour functions
-    avoid_walls(ruleset, my_head, board_height, board_width, all_snakes, possible_moves)
+    avoid_walls(my_head, board_height, board_width, possible_moves)
     avoid_hazards(my_head, my_health, hazards, hazard_damage, possible_moves, risky_moves)
     avoid_bodies(my_head, all_snakes, possible_moves)
     head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, preferred_moves)
@@ -80,6 +82,23 @@ def tuple_me(square):
 
     return (square["x"], square["y"])
 
+def find_square(target):
+
+    board = g.data["board"]
+    board_height = board["height"]
+    board_width = board["width"]
+
+    if g.ruleset == "wrapped":
+        if target["x"] < 0:
+            target["x"] = board_width - abs(target["x"])
+        elif target["x"] >= board_width:
+            target["x"] = abs(target["x"]) - board_width
+        if target["y"] < 0:
+            target["y"] = board_height - abs(target["y"])
+        elif target["y"] >= board_height:
+            target["y"] = board_height - abs(target["y"])
+    return target
+
 # If all else fails, hide inside your own shell
 def snail_squish(my_head, my_neck):
 
@@ -93,10 +112,9 @@ def snail_squish(my_head, my_neck):
         return "up"
 
 # Avoidance functions
-def avoid_walls(ruleset, my_head, board_height, board_width, all_snakes, possible_moves):
+def avoid_walls(my_head, board_height, board_width, possible_moves):
 
-    if ruleset == "wrapped":
-        think_with_portals(my_head, board_height, board_width, all_snakes, possible_moves)
+    if g.ruleset == "wrapped":
         return
 
     if my_head["x"] == 0:
@@ -108,21 +126,6 @@ def avoid_walls(ruleset, my_head, board_height, board_width, all_snakes, possibl
     if my_head["y"] == board_height - 1:
         delete_move("up", possible_moves)
 
-def think_with_portals(my_head, board_height, board_width, all_snakes, possible_moves):
-    
-    if my_head["x"] == 0:
-        my_wrapped_head = {"x": board_width, "y": my_head["y"]}
-        avoid_bodies(my_wrapped_head, all_snakes, possible_moves)
-    if my_head["x"] == board_width - 1:
-        my_wrapped_head = {"x": 0, "y": my_head["y"]}
-        avoid_bodies(my_wrapped_head, all_snakes, possible_moves)
-    if my_head["y"] == 0:
-        my_wrapped_head = {"x": my_head["x"], "y": board_height}
-        avoid_bodies(my_wrapped_head, all_snakes, possible_moves)
-    if my_head["y"] == board_height - 1:
-        my_wrapped_head = {"x": my_head["x"], "y": 0}
-        avoid_bodies(my_wrapped_head, all_snakes, possible_moves)
-
 def avoid_hazards(my_head, my_health, hazards, hazard_damage, possible_moves, risky_moves):
 
     move_tier = risky_moves
@@ -131,16 +134,16 @@ def avoid_hazards(my_head, my_health, hazards, hazard_damage, possible_moves, ri
         move_tier = deadly_moves
 
     # for hazard in hazards:
-    if {"x": my_head["x"]-1, "y": my_head["y"]} in hazards:
+    if find_square({"x": my_head["x"]-1, "y": my_head["y"]}) in hazards:
         delete_move("left", possible_moves)
         move_tier.append("left")
-    if {"x": my_head["x"]+1, "y": my_head["y"]} in hazards:
+    if find_square({"x": my_head["x"]+1, "y": my_head["y"]}) in hazards:
         delete_move("right", possible_moves)
         move_tier.append("right")
-    if {"x": my_head["x"], "y": my_head["y"]-1} in hazards:
+    if find_square({"x": my_head["x"], "y": my_head["y"]-1}) in hazards:
         delete_move("down", possible_moves)
         move_tier.append("down")
-    if {"x": my_head["x"], "y": my_head["y"]+1} in hazards:
+    if find_square({"x": my_head["x"], "y": my_head["y"]+1}) in hazards:
         delete_move("up", possible_moves)
         move_tier.append("up")
 
@@ -149,13 +152,13 @@ def avoid_bodies(my_head, all_snakes, possible_moves):
     for snake in all_snakes:
         body = snake["body"][:-1]
 
-        if {"x": my_head["x"]-1, "y": my_head["y"]} in body:
+        if find_square({"x": my_head["x"]-1, "y": my_head["y"]}) in body:
             delete_move("left", possible_moves)
-        if {"x": my_head["x"]+1, "y": my_head["y"]} in body:
+        if find_square({"x": my_head["x"]+1, "y": my_head["y"]}) in body:
             delete_move("right", possible_moves)
-        if {"x": my_head["x"], "y": my_head["y"]-1} in body:
+        if find_square({"x": my_head["x"], "y": my_head["y"]-1}) in body:
             delete_move("down", possible_moves)
-        if {"x": my_head["x"], "y": my_head["y"]+1} in body:
+        if find_square({"x": my_head["x"], "y": my_head["y"]+1}) in body:
             delete_move("up", possible_moves)
 
 # Risky move functions
@@ -173,16 +176,16 @@ def head_to_head(my_snake, my_head, all_snakes, possible_moves, risky_moves, pre
             if snake["length"] < my_snake["length"]:
                 move_tier = preferred_moves
 
-            if{"x": new_head["x"]-1, "y": new_head["y"]} == head:
+            if find_square({"x": new_head["x"]-1, "y": new_head["y"]}) == head:
                 move_tier.append(move)
                 break
-            if{"x": new_head["x"]+1, "y": new_head["y"]} == head:
+            if find_square({"x": new_head["x"]+1, "y": new_head["y"]}) == head:
                 move_tier.append(move)
                 break
-            if{"x": new_head["x"], "y": new_head["y"]-1} == head:
+            if find_square({"x": new_head["x"], "y": new_head["y"]-1}) == head:
                 move_tier.append(move)
                 break
-            if{"x": new_head["x"], "y": new_head["y"]+1} == head:
+            if find_square({"x": new_head["x"], "y": new_head["y"]+1}) == head:
                 move_tier.append(move)
                 break
 
@@ -197,7 +200,7 @@ def risky_tails(my_head, all_snakes, possible_moves, risky_moves):
         for snake in all_snakes:
             tail = snake["body"][-1]
 
-            if{"x": new_head["x"], "y": new_head["y"]} == tail:
+            if find_square({"x": new_head["x"], "y": new_head["y"]}) == tail:
                 risky_moves.append(move)
                 break
 
@@ -207,10 +210,10 @@ def risky_tails(my_head, all_snakes, possible_moves, risky_moves):
 def adjacent_square(my_head, direction):
 
     match direction:
-        case "left": return {"x": my_head["x"]-1, "y": my_head["y"]}
-        case "right": return {"x": my_head["x"]+1, "y": my_head["y"]}
-        case "down": return {"x": my_head["x"], "y": my_head["y"]-1}
-        case "up": return {"x": my_head["x"], "y": my_head["y"]+1}
+        case "left": return find_square({"x": my_head["x"]-1, "y": my_head["y"]})
+        case "right": return find_square({"x": my_head["x"]+1, "y": my_head["y"]})
+        case "down": return find_square({"x": my_head["x"], "y": my_head["y"]-1})
+        case "up": return find_square({"x": my_head["x"], "y": my_head["y"]+1})
 
 def tunnel_detection(my_head, board, all_snakes, hazards, possible_moves, risky_moves):
 
