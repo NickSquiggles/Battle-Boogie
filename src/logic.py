@@ -99,6 +99,13 @@ def find_square(target):
             target["y"] = board_height - abs(target["y"])
     return target
 
+def assess_hazard(my_health, hazard_damage, deadly_moves, risky_moves):
+
+    if hazard_damage >= my_health:
+        move_tier = deadly_moves
+    else:
+        move_tier = risky_moves
+
 # If all else fails, hide inside your own shell
 def snail_squish(my_head, my_neck):
 
@@ -128,24 +135,65 @@ def avoid_walls(my_head, board_height, board_width, possible_moves):
 
 def avoid_hazards(my_head, my_health, hazards, hazard_damage, possible_moves, risky_moves):
 
+    # if hazard_damage >= my_health:
+    #     deadly_moves = []
+    #     move_tier = deadly_moves
+    # else:
+    #     move_tier = risky_moves
+    deadly_moves = []
     move_tier = risky_moves
-    if hazard_damage >= my_health:
-        deadly_moves = []
-        move_tier = deadly_moves
 
     # for hazard in hazards:
-    if find_square({"x": my_head["x"]-1, "y": my_head["y"]}) in hazards:
+    if hazards.count(find_square({"x": my_head["x"]-1, "y": my_head["y"]})) >= 1:
+        hazard_num = hazards.count(find_square({"x": my_head["x"]-1, "y": my_head["y"]}))
+        print(f"Found a hazard, count: {hazard_num}")
+        if hazards.count(find_square({"x": my_head["x"]-1, "y": my_head["y"]})) >= 2:
+            hazard_num = hazards.count(find_square({"x": my_head["x"]-1, "y": my_head["y"]}))
+            print(f"Found a layered hazard, count: {hazard_num}")
+            move_tier = deadly_moves
         delete_move("left", possible_moves)
         move_tier.append("left")
-    if find_square({"x": my_head["x"]+1, "y": my_head["y"]}) in hazards:
+    if hazards.count(find_square({"x": my_head["x"]+1, "y": my_head["y"]})) >= 1:
+        hazard_num = hazards.count(find_square({"x": my_head["x"]+1, "y": my_head["y"]}))
+        print(f"Found a hazard, count: {hazard_num}")
+        if hazards.count(find_square({"x": my_head["x"]+1, "y": my_head["y"]})) >= 2:
+            hazard_num = hazards.count(find_square({"x": my_head["x"]+1, "y": my_head["y"]}))
+            print(f"Found a layered hazard, count: {hazard_num}")
+            move_tier = deadly_moves
         delete_move("right", possible_moves)
         move_tier.append("right")
-    if find_square({"x": my_head["x"], "y": my_head["y"]-1}) in hazards:
+    if hazards.count(find_square({"x": my_head["x"], "y": my_head["y"]-1})) >= 1:
+        hazard_num = hazards.count(find_square({"x": my_head["x"], "y": my_head["y"]-1}))
+        print(f"Found a hazard, count: {hazard_num}")
+        if hazards.count(find_square({"x": my_head["x"], "y": my_head["y"]-1})) >= 2:
+            hazard_num = hazards.count(find_square({"x": my_head["x"], "y": my_head["y"]-1}))
+            print(f"Found a layered hazard, count: {hazard_num}")
+            move_tier = deadly_moves
         delete_move("down", possible_moves)
         move_tier.append("down")
-    if find_square({"x": my_head["x"], "y": my_head["y"]+1}) in hazards:
+    if hazards.count(find_square({"x": my_head["x"], "y": my_head["y"]+1})) >= 1:
+        hazard_num = hazards.count(find_square({"x": my_head["x"], "y": my_head["y"]+1}))
+        print(f"Found a hazard, count: {hazard_num}")
+        if hazards.count(find_square({"x": my_head["x"], "y": my_head["y"]+1})) >= 2:
+            hazard_num = hazards.count(find_square({"x": my_head["x"], "y": my_head["y"]+1}))
+            print(f"Found a layered hazard, count: {hazard_num}")
+            move_tier = deadly_moves
+
         delete_move("up", possible_moves)
         move_tier.append("up")
+
+    # if find_square({"x": my_head["x"]-1, "y": my_head["y"]}) in hazards:
+    #     delete_move("left", possible_moves)
+    #     move_tier.append("left")
+    # if find_square({"x": my_head["x"]+1, "y": my_head["y"]}) in hazards:
+    #     delete_move("right", possible_moves)
+    #     move_tier.append("right")
+    # if find_square({"x": my_head["x"], "y": my_head["y"]-1}) in hazards:
+    #     delete_move("down", possible_moves)
+    #     move_tier.append("down")
+    # if find_square({"x": my_head["x"], "y": my_head["y"]+1}) in hazards:
+    #     delete_move("up", possible_moves)
+    #     move_tier.append("up")
 
 def avoid_bodies(my_head, all_snakes, possible_moves):
 
